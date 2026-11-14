@@ -1,0 +1,255 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>News Publishing | Campus News</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <header class="header">
+        <div class="logo">
+            <h1>CAMPUS<span>NEWS</span></h1>
+            <p>NEWS PUBLISHING PORTAL</p>
+        </div>
+    </header>
+
+    <main class="container">
+
+        <section class="page-intro">
+            <h2>Submit Your News</h2>
+            <p>Share important stories, developments and happenings with the campus community.</p>
+        </section>
+
+        <form id="news-form" class="publish-form">
+
+            <div class="form-group">
+                <label for="author">Reporter Name</label>
+                <input type="text" id="author" name="author"
+                    placeholder="Enter your full name" required>
+            </div>
+
+            <div class="form-group">
+                <label for="title">News Headline</label>
+                <input type="text" id="title" name="title"
+                    placeholder="Enter your news headline" required>
+            </div>
+
+            <div class="form-group">
+                <label for="category">News Category</label>
+                <select id="category" name="category" required>
+                    <option value="">Select category</option>
+                    <option value="Campus News">Campus News</option>
+                    <option value="Education">Education</option>
+                    <option value="Student Life">Student Life</option>
+                    <option value="Sports">Sports</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="content">News Article</label>
+                <textarea id="content" name="content" rows="12"
+                    placeholder="Write your complete news article here..."
+                    required></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="image">Upload News Picture</label>
+                <input type="file" id="image" name="image" accept="image/*">
+            </div>
+
+            <button type="submit" class="publish-button" id="publish-button">
+                Publish News
+            </button>
+
+            <p id="form-message"></p>
+
+        </form>
+
+        <!-- MANAGE PUBLISHED NEWS -->
+
+        <section class="manage-news">
+
+            <div class="section-heading">
+                <h2>Manage Published News</h2>
+                <span>DELETE ARTICLES</span>
+            </div>
+
+            <div id="manage-news-container">
+                <p>Loading published news...</p>
+            </div>
+
+        </section>
+
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Campus News. All Rights Reserved.</p>
+    </footer>
+
+    <script>
+
+        const form = document.getElementById("news-form");
+        const message = document.getElementById("form-message");
+        const button = document.getElementById("publish-button");
+
+        // PUBLISH NEWS
+
+        form.addEventListener("submit", async function(event) {
+            event.preventDefault();
+
+            const formData = new FormData();
+
+            formData.append("author", document.getElementById("author").value);
+            formData.append("title", document.getElementById("title").value);
+            formData.append("category", document.getElementById("category").value);
+            formData.append("content", document.getElementById("content").value);
+
+            const image = document.getElementById("image").files[0];
+
+            if (image) {
+                formData.append("image", image);
+            }
+
+            button.disabled = true;
+            button.textContent = "Publishing...";
+            message.textContent = "";
+
+            try {
+                const response = await fetch("/api/news", {
+                    method: "POST",
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.message || "Publishing failed.");
+                }
+
+                message.textContent = "News published successfully!";
+                message.style.color = "green";
+
+                form.reset();
+
+                loadManageNews();
+
+            } catch (error) {
+                message.textContent = error.message || "Something went wrong.";
+                message.style.color = "red";
+            }
+
+            button.disabled = false;
+            button.textContent = "Publish News";
+        });
+
+
+        // LOAD PUBLISHED NEWS
+
+        async function loadManageNews() {
+
+            const container = document.getElementById("manage-news-container");
+
+            try {
+
+                const response = await fetch("/api/news");
+
+                if (!response.ok) {
+                    throw new Error("Could not load news.");
+                }
+
+                const news = await response.json();
+
+                container.innerHTML = "";
+
+                if (news.length === 0) {
+                    container.innerHTML = "<p>No published news yet.</p>";
+                    return;
+                }
+
+                news.forEach(article => {
+
+                    const card = document.createElement("div");
+                    card.className = "news-card";
+
+                    const title = document.createElement("h3");
+                    title.textContent = article.title;
+
+                    const author = document.createElement("p");
+                    author.textContent = "By " + article.author;
+
+                    const category = document.createElement("p");
+                    category.textContent = article.category;
+
+                    const deleteButton = document.createElement("button");
+                    deleteButton.textContent = "Delete News";
+                    deleteButton.className = "delete-button";
+
+                    deleteButton.addEventListener("click", () => {
+                        deleteNews(article.id, deleteButton);
+                    });
+
+                    card.append(title, author, category, deleteButton);
+
+                    container.appendChild(card);
+
+                });
+
+            } catch (error) {
+                console.error(error);
+                container.textContent = "Could not load published news.";
+            }
+        }
+
+
+        // DELETE NEWS
+
+        async function deleteNews(id, deleteButton) {
+
+            const confirmDelete = confirm(
+                "Are you sure you want to delete this article?"
+            );
+
+            if (!confirmDelete) return;
+
+            deleteButton.disabled = true;
+            deleteButton.textContent = "Deleting...";
+
+            try {
+
+                const response = await fetch(`/api/news/${id}`, {
+                    method: "DELETE"
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.message || "Could not delete news.");
+                }
+
+                alert("News deleted successfully!");
+
+                loadManageNews();
+
+            } catch (error) {
+
+                alert(error.message);
+
+                deleteButton.disabled = false;
+                deleteButton.textContent = "Delete News";
+
+            }
+        }
+
+
+        // LOAD NEWS WHEN PAGE OPENS
+
+        loadManageNews();
+
+    </script>
+
+</body>
+</html>

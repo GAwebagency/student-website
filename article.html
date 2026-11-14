@@ -1,0 +1,146 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Campus News | Article</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <div class="top-bar">
+        <p>Your trusted source for campus news.</p>
+        <p id="current-date"></p>
+    </div>
+
+    <header class="header">
+        <div class="logo">
+            <h1>CAMPUS<span>NEWS</span></h1>
+            <p>INFORMING THE CAMPUS COMMUNITY</p>
+        </div>
+    </header>
+
+    <nav class="navbar">
+        <a href="index.html">HOME</a>
+        <a href="index.html#latest">LATEST NEWS</a>
+        <a href="index.html#categories">CATEGORIES</a>
+        <a href="index.html#about">ABOUT US</a>
+    </nav>
+
+    <main class="article-container">
+
+        <a href="index.html" class="back-button">
+            ← Back to Home
+        </a>
+
+        <div id="full-article">
+            <p>Loading article...</p>
+        </div>
+
+    </main>
+
+    <footer>
+        <div class="copyright">
+            <p>&copy; 2026 Campus News. All Rights Reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        const dateElement = document.getElementById("current-date");
+
+        if (dateElement) {
+            dateElement.textContent = new Date().toLocaleDateString(
+                "en-GB",
+                {
+                    weekday: "long",
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric"
+                }
+            );
+        }
+
+        async function loadArticle() {
+            const container = document.getElementById("full-article");
+
+            const params = new URLSearchParams(window.location.search);
+            const articleId = params.get("id");
+
+            if (!articleId) {
+                container.textContent = "No article selected.";
+                return;
+            }
+
+            try {
+                const response = await fetch("/api/news");
+
+                if (!response.ok) {
+                    throw new Error("Unable to load articles.");
+                }
+
+                const news = await response.json();
+
+                const article = news.find(
+                    item => String(item.id) === String(articleId)
+                );
+
+                if (!article) {
+                    container.textContent = "Article not found.";
+                    return;
+                }
+
+                document.title = article.title + " | Campus News";
+
+                container.innerHTML = "";
+
+                if (article.image) {
+                    const image = document.createElement("img");
+
+                    image.src = article.image;
+                    image.alt = article.title;
+                    image.className = "article-image";
+
+                    container.appendChild(image);
+                }
+
+                const category = document.createElement("p");
+                category.className = "article-category";
+                category.textContent = article.category;
+
+                const title = document.createElement("h1");
+                title.className = "article-title";
+                title.textContent = article.title;
+
+                const author = document.createElement("p");
+                author.className = "article-author";
+                author.textContent = "By " + article.author;
+
+                const date = document.createElement("p");
+                date.className = "article-date";
+                date.textContent = article.date;
+
+                const content = document.createElement("div");
+                content.className = "article-content";
+                content.textContent = article.content;
+                content.style.whiteSpace = "pre-wrap";
+
+                container.appendChild(category);
+                container.appendChild(title);
+                container.appendChild(author);
+                container.appendChild(date);
+                container.appendChild(content);
+
+            } catch (error) {
+                console.error(error);
+                container.textContent = "Unable to load this article.";
+            }
+        }
+
+        loadArticle();
+    </script>
+
+</body>
+</html>
